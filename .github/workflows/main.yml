@@ -2,30 +2,27 @@ name: Run API Every Minute
 
 on:
   schedule:
-    - cron: '*/1 * * * *'
+    - cron: '* * * * *'
   workflow_dispatch:
 
 jobs:
   call-api:
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     steps:
-      - name: Display execution info
+      - name: Call API (Fastest)
         run: |
-          echo "🚀 WORKFLOW TRIGGERED"
-          echo "📅 Date: $(date +'%Y-%m-%d')"
-          echo "⏰ Time: $(date +'%H:%M:%S')"
-          echo "🔄 Run Number: ${{ github.run_number }}"
-          echo "🏃 Run Attempt: ${{ github.run_attempt }}"
-          
-      - name: Call API
-        run: |
-          echo "📞 Making API call at $(date +'%H:%M:%S')..."
-          response_code=$(curl -s -o /dev/null -w "%{http_code}" \
+          start_time=$(date +%s)
+          http_code=$(curl -s -o /dev/null -w "%{http_code}" \
             -X GET \
             -H "X-Cron-Token: ${{ secrets.CRON_TOKEN }}" \
+            --max-time 30 \
             "https://networkcardahye.in/api/cron/run")
+          end_time=$(date +%s)
           
-          echo "✅ API Response: HTTP $response_code at $(date +'%H:%M:%S')"
+          echo "✅ HTTP $http_code | Time: $((end_time - start_time))s | $(date +'%H:%M:%S')"
           
-      - name: Completion message
-        run: echo "🏁 Workflow completed at $(date +'%H:%M:%S')"
+          if [ "$http_code" -ne 200 ]; then
+            echo "❌ Failed: HTTP $http_code"
+            exit 1
+          fi
