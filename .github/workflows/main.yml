@@ -1,0 +1,47 @@
+name: تشغيل الرابط المتقدم
+
+on:
+  schedule:
+    - cron: '* * * * *'
+  workflow_dispatch:
+
+jobs:
+  advanced-cron:
+    runs-on: ubuntu-latest
+    steps:
+      - name: تحميل المستودع
+        uses: actions/checkout@v3
+        
+      - name: تشغيل سكريبت بايثون
+        run: |
+          cat > cron_script.py << 'EOF'
+          import requests
+          import os
+          from datetime import datetime
+          
+          url = "https://networkcardahye.in/api/cron/run"
+          token = os.getenv('CRON_TOKEN')
+          
+          headers = {
+              "X-Cron-Token": token
+          }
+          
+          try:
+              print(f"🕒 محاولة الاستدعاء: {datetime.now()}")
+              response = requests.get(url, headers=headers, timeout=30)
+              
+              if response.status_code == 200:
+                  print("✅ النجاح - تم استدعاء الرابط بنجاح")
+                  print(f"📊 الرد: {response.text}")
+              else:
+                  print(f"❌ خطأ: كود الحالة {response.status_code}")
+                  print(f"📝 التفاصيل: {response.text}")
+                  
+          except Exception as e:
+              print(f"🚨 خطأ في الاتصال: {e}")
+          
+          EOF
+          
+          python cron_script.py
+        env:
+          CRON_TOKEN: ${{ secrets.CRON_TOKEN }}
