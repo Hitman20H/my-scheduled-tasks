@@ -1,4 +1,4 @@
-name: تشغيل الرابط المتقدم
+name: Run API Every Minute
 
 on:
   schedule:
@@ -6,42 +6,38 @@ on:
   workflow_dispatch:
 
 jobs:
-  advanced-cron:
+  call-api:
     runs-on: ubuntu-latest
     steps:
-      - name: تحميل المستودع
-        uses: actions/checkout@v3
-        
-      - name: تشغيل سكريبت بايثون
+      - name: Verify secret is loaded
         run: |
-          cat > cron_script.py << 'EOF'
-          import requests
-          import os
-          from datetime import datetime
+          if [ -z "$CRON_TOKEN" ]; then
+            echo "❌ ERROR: CRON_TOKEN secret is empty or not loaded"
+            exit 1
+          else
+            echo "✅ CRON_TOKEN is loaded (length: ${#CRON_TOKEN} chars)"
+          fi
+        env:
+          CRON_TOKEN: ${{ secrets.CRON_TOKEN }}
           
-          url = "https://networkcardahye.in/api/cron/run"
-          token = os.getenv('X_Cron_Token')
+      - name: Call API with X-Cron-Token header
+        run: |
+          response=$(curl -s -w "\n%{http_code}" \
+            -X GET \
+            -H "X-Cron-Token: $CRON_TOKEN" \
+            "https://networkcardahye.in/api/cron/run")
           
-          headers = {
-              "X-Cron-Token": token
-          }
+          http_code=$(echo "$response" | tail -n1)
+          response_body=$(echo "$response" | head -n1)
           
-          try:
-              print(f"🕒 محاولة الاستدعاء: {datetime.now()}")
-              response = requests.get(url, headers=headers, timeout=30)
-              
-              if response.status_code == 200:
-                  print("✅ النجاح - تم استدعاء الرابط بنجاح")
-                  print(f"📊 الرد: {response.text}")
-              else:
-                  print(f"❌ خطأ: كود الحالة {response.status_code}")
-                  print(f"📝 التفاصيل: {response.text}")
-                  
-          except Exception as e:
-              print(f"🚨 خطأ في الاتصال: {e}")
+          echo "📊 HTTP Status: $http_code"
+          echo "📝 Response: $response_body"
           
-          EOF
-          
-          python cron_script.py
+          if [ "$http_code" -eq 200 ]; then
+            echo "🎉 SUCCESS: API call worked!"
+          else
+            echo "❌ FAILED: Check your token value"
+            exit 1
+          fi
         env:
           CRON_TOKEN: ${{ secrets.CRON_TOKEN }}
