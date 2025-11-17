@@ -20,7 +20,7 @@ jobs:
           from datetime import datetime
           
           url = "https://networkcardahye.in/api/cron/run"
-          token = os.getenv('CRON_TOKEN')
+          token = os.getenv('X_Cron_Token')
           
           headers = {
               "X-Cron-Token": token
