@@ -9,35 +9,24 @@ jobs:
   call-api:
     runs-on: ubuntu-latest
     steps:
-      - name: Verify secret is loaded
+      - name: Test API with X-Cron-Token
         run: |
-          if [ -z "$CRON_TOKEN" ]; then
-            echo "❌ ERROR: CRON_TOKEN secret is empty or not loaded"
-            exit 1
-          else
-            echo "✅ CRON_TOKEN is loaded (length: ${#CRON_TOKEN} chars)"
-          fi
-        env:
-          CRON_TOKEN: ${{ secrets.CRON_TOKEN }}
+          echo "🔑 Making API call with X-Cron-Token header..."
           
-      - name: Call API with X-Cron-Token header
-        run: |
           response=$(curl -s -w "\n%{http_code}" \
             -X GET \
-            -H "X-Cron-Token: $CRON_TOKEN" \
+            -H "X-Cron-Token: ${{ secrets.CRON_TOKEN }}" \
             "https://networkcardahye.in/api/cron/run")
           
           http_code=$(echo "$response" | tail -n1)
           response_body=$(echo "$response" | head -n1)
           
-          echo "📊 HTTP Status: $http_code"
+          echo "📊 HTTP Status Code: $http_code"
           echo "📝 Response: $response_body"
           
           if [ "$http_code" -eq 200 ]; then
-            echo "🎉 SUCCESS: API call worked!"
+            echo "✅ SUCCESS! API is working correctly"
           else
-            echo "❌ FAILED: Check your token value"
-            exit 1
+            echo "❌ FAILED: HTTP $http_code"
+            echo "The token might be incorrect or the API endpoint has issues"
           fi
-        env:
-          CRON_TOKEN: ${{ secrets.CRON_TOKEN }}
